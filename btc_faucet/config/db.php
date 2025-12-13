@@ -1,6 +1,6 @@
 <?php
 // config/db.php
-// Connexion PDO à MySQL
+// Connexion PDO à MySQL (local + Render)
 
 declare(strict_types=1);
 
@@ -14,7 +14,10 @@ function get_pdo(): PDO
     static $pdo = null;
 
     if ($pdo === null) {
-        $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4';
+        // Si DB_PORT est défini, on l'ajoute au DSN
+        $portPart = (defined('DB_PORT') && DB_PORT !== '') ? ';port=' . DB_PORT : '';
+
+        $dsn = 'mysql:host=' . DB_HOST . $portPart . ';dbname=' . DB_NAME . ';charset=utf8mb4';
         $options = [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -28,6 +31,8 @@ function get_pdo(): PDO
             echo json_encode([
                 'error'   => 'db_connection_error',
                 'message' => 'Impossible de se connecter à la base de données.',
+                // Décommente la ligne suivante UNIQUEMENT pour debug (pas en prod)
+                // 'details' => $e->getMessage(),
             ]);
             exit;
         }
