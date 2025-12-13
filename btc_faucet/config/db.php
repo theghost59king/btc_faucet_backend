@@ -1,5 +1,5 @@
 <?php
-// config/db.php
+// btc_faucet/config/db.php
 // Connexion PDO à MySQL (local + Render)
 
 declare(strict_types=1);
@@ -42,8 +42,3 @@ function get_pdo(): PDO
         exit;
     }
 }
-
-    return $pdo;
-}
-
-
