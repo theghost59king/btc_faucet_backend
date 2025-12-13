@@ -1,6 +1,7 @@
 <?php
 // config/db.php
 // Connexion PDO à MySQL (local + Render)
+// + Debug optionnel via variable d'environnement APP_DEBUG=1
 
 declare(strict_types=1);
 
@@ -28,15 +29,28 @@ function get_pdo(): PDO
         } catch (PDOException $e) {
             http_response_code(500);
             header('Content-Type: application/json; charset=utf-8');
+
+            $debug = getenv('APP_DEBUG') === '1';
+
             echo json_encode([
                 'error'   => 'db_connection_error',
                 'message' => 'Impossible de se connecter à la base de données.',
-                // Décommente la ligne suivante UNIQUEMENT pour debug (pas en prod)
-                // 'details' => $e->getMessage(),
-            ]);
+                // ✅ On n'affiche le détail QUE si APP_DEBUG=1
+                'details' => $debug ? $e->getMessage() : null,
+                'dsn'     => $debug ? $dsn : null,
+                'host'    => $debug ? DB_HOST : null,
+                'db'      => $debug ? DB_NAME : null,
+                'user'    => $debug ? DB_USER : null,
+                'port'    => $debug ? (defined('DB_PORT') ? DB_PORT : '') : null,
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             exit;
         }
     }
 
     return $pdo;
 }
+
+
+    return $pdo;
+}
+
