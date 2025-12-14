@@ -8,8 +8,14 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/utils.php';
+require_once __DIR__ . '/../config/rate_limit.php';
+
+$ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+rate_limit_or_429('register:ip:' . $ip, 10 * 60, 5); // 5 inscriptions / 10 minutes / IP
+
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['error' => 'method_not_allowed'], 405);
@@ -146,3 +152,4 @@ try {
         'message' => 'Erreur lors de la création du compte.',
     ], 500);
 }
+
