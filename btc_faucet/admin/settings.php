@@ -1,6 +1,6 @@
 <?php
 // admin/settings.php
-// Formulaire de gestion des paramètres globaux
+// Formulaire de gestion des paramètres globaux (avec monétisation)
 
 declare(strict_types=1);
 
@@ -28,7 +28,13 @@ if (!$settings) {
         'reward_min_sat' => 1,
         'reward_max_sat' => 5,
         'withdraw_min_sat' => 20000,
-        'ad_countdown_seconds' => 5,
+        'ad_countdown_seconds' => 20,
+
+        // Nouveaux (monétisation)
+        'ads_enabled' => 1,
+        'ad_countdown_faucet_seconds' => 20,
+        'ad_countdown_wheel_seconds' => 20,
+
         'pool_total_sat' => 1000000,
         'pool_remaining_sat' => 1000000,
     ];
@@ -39,7 +45,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($error)) {
     $rewardMin      = (int)($_POST['reward_min_sat'] ?? 1);
     $rewardMax      = (int)($_POST['reward_max_sat'] ?? 5);
     $withdrawMin    = (int)($_POST['withdraw_min_sat'] ?? 20000);
-    $adCountdown    = (int)($_POST['ad_countdown_seconds'] ?? 5);
+
+    // Ancien champ global (fallback)
+    $adCountdown    = (int)($_POST['ad_countdown_seconds'] ?? 20);
+
+    // Nouveaux
+    $adsEnabled     = isset($_POST['ads_enabled']) ? 1 : 0;
+    $adCdFaucet     = (int)($_POST['ad_countdown_faucet_seconds'] ?? $adCountdown);
+    $adCdWheel      = (int)($_POST['ad_countdown_wheel_seconds'] ?? $adCountdown);
 
     $poolTotal      = (int)($_POST['pool_total_sat'] ?? 1000000);
     $poolRemaining  = (int)($_POST['pool_remaining_sat'] ?? $poolTotal);
@@ -49,7 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($error)) {
     if ($rewardMin < 1) $rewardMin = 1;
     if ($rewardMax < $rewardMin) $rewardMax = $rewardMin;
     if ($withdrawMin < 1) $withdrawMin = 1;
+
     if ($adCountdown < 0) $adCountdown = 0;
+    if ($adCdFaucet < 0) $adCdFaucet = 0;
+    if ($adCdWheel < 0) $adCdWheel = 0;
 
     if ($poolTotal < 0) $poolTotal = 0;
     if ($poolRemaining < 0) $poolRemaining = 0;
@@ -66,7 +82,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($error)) {
                  reward_min_sat = :reward_min,
                  reward_max_sat = :reward_max,
                  withdraw_min_sat = :withdraw_min,
-                 ad_countdown_seconds = :ad_countdown,
+
+                 ad_countdown_seconds = :ad_countdown, -- fallback
+                 ads_enabled = :ads_enabled,
+                 ad_countdown_faucet_seconds = :ad_cd_faucet,
+                 ad_countdown_wheel_seconds = :ad_cd_wheel,
+
                  pool_total_sat = :pool_total,
                  pool_remaining_sat = :pool_remaining
              WHERE id = 1'
@@ -76,17 +97,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($error)) {
             'reward_min'      => $rewardMin,
             'reward_max'      => $rewardMax,
             'withdraw_min'    => $withdrawMin,
+
             'ad_countdown'    => $adCountdown,
+            'ads_enabled'     => $adsEnabled,
+            'ad_cd_faucet'    => $adCdFaucet,
+            'ad_cd_wheel'     => $adCdWheel,
+
             'pool_total'      => $poolTotal,
             'pool_remaining'  => $poolRemaining,
         ]);
 
         $message = 'Paramètres mis à jour avec succès.';
+
         $settings['faucet_interval_minutes'] = $faucetInterval;
         $settings['reward_min_sat'] = $rewardMin;
         $settings['reward_max_sat'] = $rewardMax;
         $settings['withdraw_min_sat'] = $withdrawMin;
+
         $settings['ad_countdown_seconds'] = $adCountdown;
+        $settings['ads_enabled'] = $adsEnabled;
+        $settings['ad_countdown_faucet_seconds'] = $adCdFaucet;
+        $settings['ad_countdown_wheel_seconds'] = $adCdWheel;
+
         $settings['pool_total_sat'] = $poolTotal;
         $settings['pool_remaining_sat'] = $poolRemaining;
     } catch (Throwable $e) {
@@ -123,9 +155,36 @@ include __DIR__ . '/partials/header.php';
             <input type="number" id="reward_max_sat" name="reward_max_sat" min="1"
                    value="<?= (int)$settings['reward_max_sat'] ?>">
 
-            <label for="ad_countdown_seconds">Compte à rebours pub (secondes)</label>
-            <input type="number" id="ad_countdown_seconds" name="ad_countdown_seconds" min="0"
-                   value="<?= (int)$settings['ad_countdown_seconds'] ?>">
+            <p style="color:#6b7280;margin:8px 0 0;">
+                💡 Le compte à rebours pub est maintenant <b>séparé</b> : Faucet / Roue.
+            </p>
+        </div>
+
+        <div class="card">
+            <h3>Monétisation (publicités)</h3>
+
+            <label style="display:flex; gap:10px; align-items:center;">
+                <input type="checkbox" name="ads_enabled" value="1" <?= ((int)($settings['ads_enabled'] ?? 1) === 1) ? 'checked' : '' ?>>
+                Activer les publicités dans l'app
+            </label>
+
+            <label for="ad_countdown_faucet_seconds">Compte à rebours pub (Faucet) secondes</label>
+            <input type="number" id="ad_countdown_faucet_seconds" name="ad_countdown_faucet_seconds" min="0"
+                   value="<?= (int)($settings['ad_countdown_faucet_seconds'] ?? ($settings['ad_countdown_seconds'] ?? 20)) ?>">
+
+            <label for="ad_countdown_wheel_seconds">Compte à rebours pub (Roue) secondes</label>
+            <input type="number" id="ad_countdown_wheel_seconds" name="ad_countdown_wheel_seconds" min="0"
+                   value="<?= (int)($settings['ad_countdown_wheel_seconds'] ?? ($settings['ad_countdown_seconds'] ?? 20)) ?>">
+
+            <details style="margin-top:10px;">
+                <summary style="cursor:pointer;">Compatibilité (ancien champ)</summary>
+                <div style="margin-top:10px; color:#6b7280;">
+                    <p>Ce champ sert de <b>fallback</b> si les nouveaux champs n'existent pas encore.</p>
+                    <label for="ad_countdown_seconds">Compte à rebours pub (fallback) secondes</label>
+                    <input type="number" id="ad_countdown_seconds" name="ad_countdown_seconds" min="0"
+                           value="<?= (int)($settings['ad_countdown_seconds'] ?? 20) ?>">
+                </div>
+            </details>
         </div>
 
         <div class="card">
