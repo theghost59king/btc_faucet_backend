@@ -4,8 +4,13 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/utils.php';
+require_once __DIR__ . '/../config/rate_limit.php';
+
+rate_limit_or_429('login:ip:' . $ip, 10 * 60, 10); // 10 tentatives / 10 min / IP
+
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['error' => 'method_not_allowed'], 405);
@@ -52,3 +57,4 @@ json_response([
     'pseudo' => $user['pseudo'],
     'token'  => $apiToken,
 ]);
+
