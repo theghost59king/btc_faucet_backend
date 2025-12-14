@@ -6,7 +6,14 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/utils.php';
+require_once __DIR__ . '/../config/rate_limit.php';
+
+$user = require_auth_user();
+rate_limit_or_429('wheel:user:' . $user['id'], 60, 3);
+
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['error' => 'method_not_allowed'], 405);
@@ -194,3 +201,4 @@ try {
         'message' => 'Erreur lors du spin.',
     ], 500);
 }
+
