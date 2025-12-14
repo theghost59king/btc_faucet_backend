@@ -38,17 +38,24 @@ try {
 
 $pdo = get_pdo();
 
-$stmt = $pdo->prepare(
-    "INSERT INTO ad_events (ad_id, user_id, event_type, placement, created_at)
-     VALUES (:ad_id, :user_id, :event_type, :placement, :created_at)"
-);
+try {
+    $stmt = $pdo->prepare(
+        "INSERT INTO ad_events (ad_id, user_id, event_type, placement, created_at)
+         VALUES (:ad_id, :user_id, :event_type, :placement, :created_at)"
+    );
 
-$stmt->execute([
-    'ad_id' => $adId,
-    'user_id' => $user ? (int)$user['id'] : null,
-    'event_type' => $eventType,
-    'placement' => $placement,
-    'created_at' => now_datetime(),
-]);
+    $stmt->execute([
+        'ad_id' => $adId,
+        'user_id' => $user ? (int)$user['id'] : null,
+        'event_type' => $eventType,
+        'placement' => $placement,
+        'created_at' => now_datetime(),
+    ]);
 
-json_response(['ok' => true]);
+    json_response(['ok' => true]);
+} catch (Throwable $e) {
+    json_response([
+        'error' => 'ad_event_failed',
+        'message' => 'Impossible d’enregistrer l’événement pub.',
+    ], 500);
+}
